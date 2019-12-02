@@ -1,3 +1,4 @@
+import keras
 import matplotlib.pyplot as plt
 
 import os
@@ -6,13 +7,16 @@ import google
 from joblib import dump, load
 
 from sklearn.svm import SVC, LinearSVC
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.model_selection import StratifiedKFold
 
 from keras.models import Sequential, Model
 from keras.preprocessing.image import ImageDataGenerator
 from keras.layers import GlobalAveragePooling2D, GlobalMaxPooling2D
 from keras.applications.vgg16 import VGG16
+
+import matplotlib.pyplot as plt
+
 
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -69,10 +73,10 @@ def save_all_features(nb_samples, source="./datasets/D1/images/", dest="./datase
     c5 = model.layers[-1].output
     c5 = GlobalAveragePooling2D()(c5)
 
-    model = Model(inputs=model.input, outputs=(c1, c2, c3, c4, c5))
 
     # define image generator without augmentation
     datagen = ImageDataGenerator(rescale=1. / 255.)
+
     generator = datagen.flow_from_directory(
         source,
         target_size=(img_height, img_width),
@@ -96,6 +100,12 @@ def save_all_features(nb_samples, source="./datasets/D1/images/", dest="./datase
         with open(dest + "filenames.npy", 'w') as f:
             np.save(f.name, names)
 
+    model = Model(inputs=model.input, outputs=(c1, c2, c3, c4, c5))
+
+    # always save your weights after training or during training
+    model.save_weights('first_try.h5')
+    model.save('model_save')
+
 
 def kfoldSVM_on_features(X, Y):
     # define 10-fold cross validation test harness
@@ -110,11 +120,9 @@ def kfoldSVM_on_features(X, Y):
         splits.append((Y[test], y_pred))
     print("Accuracy score averaged across 10 kfolds %.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
     dump(clf, "BeetleModel1.joblib")
-    
-
 
 def evaluate(dest="./datasets/D1/features/", size=416, strategy="-AVG"):
-    #
+    # looks like this grabs the layers from the generator outputs that were saved
     size = str(size)
     l1 = np.load(dest + "X-" + size + "-c1" + strategy + ".npy")
     l2 = np.load(dest + "X-" + size + "-c2" + strategy + ".npy")
@@ -141,11 +149,10 @@ def evaluate(dest="./datasets/D1/features/", size=416, strategy="-AVG"):
 
 
 input_size = (416, 416)
-nb_samples = 876
+nb_samples = 876 #input size - 6 for some reason
 save_all_features(nb_samples, source="./datasets/D1/images/",
                   dest="./datasets/D1/features/", input_size=input_size)
 
-print("evaluating dataset with input size", input_size, "and GlobalAveragePooling2D")
-
+print("evaluating dataset with input size ", str(input_size), " and GlobalAveragePooling2D")
 evaluate(dest="./datasets/D1/features/", size=input_size[0])
 
