@@ -23,7 +23,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 
-def save_all_features(nb_samples, source="./datasets/D1/images/", dest="./datasets/D1/features/", input_size=(416, 416), batch_size=6):
+def save_all_features(nb_samples, source="./datasets/D1/images/", dest="./datasets/D1/features/", input_size=(416, 416), batch_size=16):
     """
     This function extracts features after every MaxPool layer in VGG16.
         Input:
@@ -74,6 +74,12 @@ def save_all_features(nb_samples, source="./datasets/D1/images/", dest="./datase
     c5 = GlobalAveragePooling2D()(c5)
 
 
+    model = Model(inputs=model.input, outputs=(c1, c2, c3, c4, c5))
+
+    # always save your weights after training or during training
+    model.save_weights('first_try.h5')
+    model.save('model_save')
+
     # define image generator without augmentation
     datagen = ImageDataGenerator(rescale=1. / 255.)
 
@@ -91,25 +97,24 @@ def save_all_features(nb_samples, source="./datasets/D1/images/", dest="./datase
     names = generator.filenames
 
     for n, i in enumerate(X):
+        print("Saving " + n + " and " + i)
         with open(dest + "X-" + str(img_height) + "-c" + str(n + 1) + "-AVG.npy", 'w') as f:
             np.save(f.name, i)
+
     if not os.path.exists(dest + "Y.npy"):
         with open(dest + "Y.npy", 'w') as f:
             np.save(f.name, Y)
+
     if not os.path.exists(dest + "filenames.npy"):
         with open(dest + "filenames.npy", 'w') as f:
             np.save(f.name, names)
 
-    model = Model(inputs=model.input, outputs=(c1, c2, c3, c4, c5))
-
-    # always save your weights after training or during training
-    model.save_weights('first_try.h5')
-    model.save('model_save')
 
 
 def kfoldSVM_on_features(X, Y):
     # define 10-fold cross validation test harness
-    kfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=555)
+    kfold = StratifiedKFold(n_splits = 10, shuffle = True, random_state = 555)
+
     cvscores, splits = [], []
     for train, test in kfold.split(X, Y):
         clf = LinearSVC(C=1.0, loss='squared_hinge', penalty='l2', multi_class='ovr')
@@ -119,7 +124,7 @@ def kfoldSVM_on_features(X, Y):
         cvscores.append(acc)
         splits.append((Y[test], y_pred))
     print("Accuracy score averaged across 10 kfolds %.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
-    dump(clf, "BeetleModel1.joblib")
+    dump(clf, "BeetleModelResults.joblib")
 
 def evaluate(dest="./datasets/D1/features/", size=416, strategy="-AVG"):
     # looks like this grabs the layers from the generator outputs that were saved
@@ -141,15 +146,17 @@ def evaluate(dest="./datasets/D1/features/", size=416, strategy="-AVG"):
             print("fused features across all conv blocks")
         else:
             print("conv block", n + 1)
+
         print("without normalization")
         kfoldSVM_on_features(x, Y)
+
         print("with square root normalization")
         x = np.sqrt(np.abs(x)) * np.sign(x)
         kfoldSVM_on_features(x, Y)
 
 
 input_size = (416, 416)
-nb_samples = 876 #input size - 6 for some reason
+nb_samples = 866 #input size - batch size
 save_all_features(nb_samples, source="./datasets/D1/images/",
                   dest="./datasets/D1/features/", input_size=input_size)
 
