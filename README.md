@@ -1,7 +1,12 @@
 # SpiderTree
 
 Project Overview: 
-This project is an attempt to create a data classification pipeline for identifying spiders, specifically in the Infraorder Entelegynae. 
+This project is an attempt to create a data classification pipeline for identifying spiders, specifically in the Infraorder Entelegynae.
+
+Currently, the project uses Python 3 to load images of beetle faces from university links, and then uses an altered VGG16 model to create tensors of these images at different levels of feature resolution. These tensors are used to train a LinearSVM for the purpose of classifying them. I have not been able to meaningfully interact with the tensors produced, but would imagine they look like heavily pixelated beetle faces that have been line-emphasized. 
+
+====
+
 
 The project will use Python 3 to grab data from the iNaturalist api in the form of image + metadata, to construct a statistical model using a CNN, such as VGG16 or VGG19, that can be used to categorize further images. 
 
